@@ -85,7 +85,7 @@ Extract data from a complex string, clean it up, and build a URL.
 * **Input:** `prefix.us_east__asset_name`
 * **Target:** `https://example.com/us.east?asset=ASSET-NAME`
 
-```json
+```jsonc
 {
   "jsonPath": "$.assets[*].id",
   "linkPattern": {
