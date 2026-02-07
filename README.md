@@ -1,5 +1,10 @@
 # Structural Links
 
+
+<video src="https://github.com/user-attachments/assets/e75a5a9e-4374-4930-934e-bf933e3f3b72"></video>
+
+
+
 **Structural Links** is a VS Code extension that turns your static configuration files, logs, and proprietary data structures into interactive, clickable links.
 
 Unlike standard link detectors that only catch `http://...`, this extension allows you to define **rules**. You can link specific keys in a YAML/JSON tree (using JSONPath) or arbitrary text patterns (using Regex) to dynamic targets, including external URLs, local files, or command URIs.
