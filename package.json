@@ -101,7 +101,7 @@
                                 "properties": {
                                     "capture": {
                                         "type": "string",
-                                        "markdownDescription": "Regex to extract values (`$1`, `$2`).",
+                                        "markdownDescription": "Regex to extract values (`$1`, `$2`). \n\nYou may also use named groups: `(?<name>...)` and reference them as `$name`. \n\nIf omitted, the whole JSONPath match or text match is used. Default is the whole match.",
                                         "default": "^(.*)$",
                                         "format": "regex",
                                         "examples": [
@@ -124,7 +124,7 @@
                                                 },
                                                 "applyTo": {
                                                     "type": "string",
-                                                    "markdownDescription": "Apply to a specific capture group (e.g., `$1`) or `all`. If omitted, applies to the whole URL. Default is `all`.",
+                                                    "markdownDescription": "Apply to a specific capture group (e.g., `$1` or `$name` if you used named groups `(?<name>...)`) or `all`.\n\nIf omitted, applies to the whole URL\n\nDefault is `all`.",
                                                     "default": "all",
                                                     "examples": [
                                                         "$1",
@@ -138,14 +138,14 @@
                                     },
                                     "target": {
                                         "type": "string",
-                                        "markdownDescription": "Target URL. Use `$1`... for groups. e.g., `https://example.com/$1`.",
+                                        "markdownDescription": "Target URL. Use `$1`... for groups.\n\ne.g.:\n\n- `https://example.com/$1`\n- `https://example.com/$name` (when using named groups like `(?<name>...)`)",
                                         "examples": [
                                             "https://example.com/$1"
                                         ]
                                     },
                                     "text": {
                                         "type": "string",
-                                        "markdownDescription": "Hover tooltip text. May use `$1`... for groups. Defaults to 'Open Link'.",
+                                        "markdownDescription": "Hover tooltip text.\n\nMay include capture group results: `$1`... or named groups (`(?<name>...)` -> `$name`).\n\n Defaults to 'Open Link'.",
                                         "default": "Open Link",
                                         "examples": [
                                             "Open Link for '$1'"
