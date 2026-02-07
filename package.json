@@ -1,51 +1,98 @@
 {
-  "name": "structural-links",
-  "displayName": "Structural Links",
-  "description": "Extend JSON Path documents and text files to show external links",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.109.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [],
-  "main": "./dist/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "structural-links.helloWorld",
-        "title": "Hello World"
-      }
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
-    "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "@types/vscode": "^1.109.0",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
-    "esbuild": "^0.27.2",
-    "eslint": "^9.39.2",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0"
-  },
-  "dependencies": {
-    "yaml": "^2.8.2"
-  }
+    "name": "structural-links",
+    "displayName": "Structural Links",
+    "description": "Extend JSON Path documents and text files to show external links",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.109.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onLanguage:yaml",
+        "onLanguage:json"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "structural-links.helloWorld",
+                "title": "Hello World"
+            }
+        ],
+        "configuration": {
+            "title": "Structural Links",
+            "properties": {
+                "structuralLinks.rules": {
+                    "type": "array",
+                    "description": "Rules for linking specific paths in YAML/JSON to URLs",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "filePattern": {
+                                "type": "string",
+                                "description": "Glob pattern for files this rule applies to (e.g., **/models/*.yaml).",
+                                "default": "**/*"
+                            },
+                            "jsonPath": {
+                                "type": "string",
+                                "description": "Dot-notation path to the field (e.g., spec.containers.*.image)."
+                            },
+                            "linkPattern": {
+                                "type": "object",
+                                "properties": {
+                                    "capture": {
+                                        "type": "string",
+                                        "description": "Regex to match the value. Use groups ($1, $2) for replacement.",
+                                        "default": "(.*)"
+                                    },
+                                    "target": {
+                                        "type": "string",
+                                        "description": "Target URL. Use $1... for groups, ${workspaceFolder} for root."
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "The hover text (Tooltip). Supports $1... replacement.",
+                                        "default": "Open: $1"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "npm run check-types && npm run lint && node esbuild.js",
+        "watch": "npm-run-all -p watch:*",
+        "watch:esbuild": "node esbuild.js --watch",
+        "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+        "package": "npm run check-types && npm run lint && node esbuild.js --production",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "npm run compile-tests && npm run compile && npm run lint",
+        "check-types": "tsc --noEmit",
+        "lint": "eslint src",
+        "test": "vscode-test"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.10",
+        "@types/node": "22.x",
+        "@types/vscode": "^1.109.0",
+        "@vscode/test-cli": "^0.0.12",
+        "@vscode/test-electron": "^2.5.2",
+        "esbuild": "^0.27.2",
+        "eslint": "^9.39.2",
+        "npm-run-all": "^4.1.5",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.54.0"
+    },
+    "dependencies": {
+        "@types/minimatch": "^5.1.2",
+        "minimatch": "^10.1.2",
+        "yaml": "^2.8.2"
+    }
 }
