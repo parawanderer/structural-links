@@ -6,8 +6,9 @@ import { jsonPathToRegex } from './pathMatcher';
 
 interface LinkRule {
     filePattern?: string;
-    jsonPath?: string;   // Optional now, because you might use textPattern instead
-    textPattern?: string; // New generic regex support
+    jsonPath?: string;
+    jsonPathValuePattern?: string; // optional regex to match the value at the JSONPath
+    textPattern?: string;
     linkPattern: {
         capture?: string;
         target: string;
@@ -80,8 +81,8 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
 
     // --- STRATEGY A: STRUCTURAL (JSON/YAML) ---
     // Only parse AST if we have at least one JSONPath rule
-    const textPatternRules: LinkRule[] = activeRules.filter(r => !!r.jsonPath);
-    if (textPatternRules.length > 0) {
+    const jsonPathRules: LinkRule[] = activeRules.filter(r => !!r.jsonPath);
+    if (jsonPathRules.length > 0) {
         try {
             const yamlDoc = parseDocument(text);
 
@@ -93,7 +94,7 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
                     // path: ['.vars', 'foo'] -> "\x00.vars\x00foo"
                     const pathString = '\x00' + currentPath.join('\x00');
 
-                    for (const rule of textPatternRules) {
+                    for (const rule of jsonPathRules) {
                         try {
 
                             let ruleRegex = regexCache.get(rule.jsonPath!);
@@ -104,12 +105,29 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
 
                             if (ruleRegex.test(pathString)) {
 
-                                const range = new vscode.Range(
+                                let targetContent: string = node.value as string;
+                                let range = new vscode.Range(
                                     document.positionAt(node.range![0]),
                                     document.positionAt(node.range![1])
                                 );
 
-                                createLink(node.value as string, range, rule, document, links);
+                                if (rule.jsonPathValuePattern) {
+                                    const valueRegex = new RegExp(rule.jsonPathValuePattern);
+                                    const match = valueRegex.exec(String(node.value));
+
+                                    if (!match) {
+                                        continue; // Skip this rule if value doesn't match
+                                    }
+
+                                    targetContent = match[0]; // Use the matched portion of the value
+                                    range = new vscode.Range(
+                                        document.positionAt(node.range![0] + 1 + match.index),
+                                        document.positionAt(node.range![0] + 1 + match.index + match[0].length)
+                                    );
+
+                                }
+
+                                createLink(targetContent, range, rule, document, links);
                             }
                         } catch (e) { /* ignore invalid regex */ }
                     }
@@ -140,31 +158,31 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
 
     // --- STRATEGY B: TEXT (REGEX ANYWHERE) ---
     // Runs on the raw text, ignores structure. Good for comments/weird files.
-    // const textPatternRules: LinkRule[] = activeRules.filter(r => !!r.textPattern);
-    // textPatternRules.forEach(rule => {
-    //     try {
-    //         const globalRegex = new RegExp(rule.textPattern!, 'g'); // Ensure global flag
+    const textPatternRules: LinkRule[] = activeRules.filter(r => !!r.textPattern);
+    textPatternRules.forEach(rule => {
+        try {
+            const globalRegex = new RegExp(rule.textPattern!, 'g'); // Ensure global flag
 
-    //         let match: RegExpExecArray | null;
-    //         while ((match = globalRegex.exec(text)) !== null) {
-    //             // Construct a fake "Node" object to reuse createLink
-    //             // match.index is the start, match[0].length is the length
-    //             const startPos = match.index;
-    //             const endPos = match.index + match[0].length;
+            let match: RegExpExecArray | null;
+            while ((match = globalRegex.exec(text)) !== null) {
+                // Construct a fake "Node" object to reuse createLink
+                // match.index is the start, match[0].length is the length
+                const startPos = match.index;
+                const endPos = match.index + match[0].length;
 
-    //             // We create a fake node with a range property
-    //             // We need to map offset to line/col manually here since we don't have AST
-    //             const range = new vscode.Range(
-    //                 document.positionAt(startPos),
-    //                 document.positionAt(endPos)
-    //             );
+                // We create a fake node with a range property
+                // We need to map offset to line/col manually here since we don't have AST
+                const range = new vscode.Range(
+                    document.positionAt(startPos),
+                    document.positionAt(endPos)
+                );
 
-    //             createLink(match[0], range, rule, document, links);
-    //         }
-    //     } catch (e) {
-    //         console.log("Text pattern error", e);
-    //     }
-    // });
+                createLink(match[0], range, rule, document, links);
+            }
+        } catch (e) {
+            console.log("Text pattern error", e);
+        }
+    });
 
     return links;
 }

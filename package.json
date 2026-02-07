@@ -75,6 +75,15 @@
                                     "$..author"
                                 ]
                             },
+                            "jsonPathValuePattern": {
+                                "type": "string",
+                                "description": "Regex to match the value at the JSONPath. Only applies to jsonPath rules.",
+                                "format": "regex",
+                                "examples": [
+                                    "(.*)",
+                                    "prefix\\.(\\w+)"
+                                ]
+                            },
                             "textPattern": {
                                 "type": "string",
                                 "description": "Global Regex to find in the file (ignores JSON structure).",
