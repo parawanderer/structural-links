@@ -1,18 +1,14 @@
 /* eslint-disable curly */
 import * as vscode from 'vscode';
-import { parseDocument, isMap, isSeq, isScalar, Document, Node } from 'yaml';
+import { parseDocument, isMap, isSeq, isScalar } from 'yaml';
 import { minimatch } from 'minimatch';
 import { jsonPathToRegex } from './pathMatcher';
-import { LinkDetails, LinkRule, LinkRuleTransform } from './types';
-import { createLink } from './linkBuilder';
+import { LinkDetails, LinkRule } from './types';
+import { createLink, injectSystemVariables } from './linkBuilder';
+import path from 'path';
 
 
-const FILE_SELECTORS: vscode.DocumentSelector = [
-    { language: 'yaml' },
-    { language: 'json' }
-];
-
-const DEFAULT_TOOLTIP = "Open Link";
+const FILE_SELECTORS: vscode.DocumentSelector = [{ pattern: '**/*' }];
 
 let currentProvider: vscode.Disposable | undefined;
 const regexCache = new Map<string, RegExp>();
@@ -71,6 +67,7 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const text = document.getText();
     const links: vscode.DocumentLink[] = [];
 
+    const vars = buildSystemVariableMap(document);
 
     // --- STRATEGY A: STRUCTURAL (JSON/YAML) ---
     // Only parse AST if we have at least one JSONPath rule
@@ -115,7 +112,10 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
 
                                 const linkDetails: LinkDetails | null = createLink(targetContent, rule);
                                 if (linkDetails){
-                                    const link = new vscode.DocumentLink(range, vscode.Uri.parse(linkDetails.target));
+                                    const link = new vscode.DocumentLink(
+                                        range,
+                                        vscode.Uri.parse(injectSystemVariables(linkDetails.target, vars))
+                                );
                                     link.tooltip = linkDetails.tooltip;
                                     links.push(link);
                                 }
@@ -126,12 +126,12 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
                 }
 
                 if (isMap(node)) {
-                        node.items.forEach((pair: any) => {
-                            const keyName = pair.key && isScalar(pair.key) ? String(pair.key.value) : '';
-                            // Don't skip empty keys, they are valid in YAML!
-                            visit(pair.value, [...currentPath, keyName]);
-                        });
-                    }
+                    node.items.forEach((pair: any) => {
+                        const keyName = pair.key && isScalar(pair.key) ? String(pair.key.value) : '';
+                        // Don't skip empty keys, they are valid in YAML!
+                        visit(pair.value, [...currentPath, keyName]);
+                    });
+                }
 
                 if (isSeq(node)) {
                     node.items.forEach((item: any, index: number) => {
@@ -170,7 +170,10 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
 
                 const linkDetails: LinkDetails | null = createLink(match[0], rule);
                 if (linkDetails){
-                    const link = new vscode.DocumentLink(range, vscode.Uri.parse(linkDetails.target));
+                    const link = new vscode.DocumentLink(
+                        range,
+                        vscode.Uri.parse(injectSystemVariables(linkDetails.target, vars))
+                    );
                     link.tooltip = linkDetails.tooltip;
                     links.push(link);
                 }
@@ -181,4 +184,29 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     });
 
     return links;
+}
+
+function buildSystemVariableMap(doc: vscode.TextDocument): Record<string, string> {
+    const workspace = vscode.workspace.getWorkspaceFolder(doc.uri);
+
+    const relativeFile = vscode.workspace.asRelativePath(doc.uri);
+    const relativeFileDirname = path.dirname(relativeFile);
+
+    // We use fsPath to avoid "file:///" prefixes
+    const vars: Record<string, string> = {
+        'workspaceFolder': workspace ? workspace.uri.fsPath : '',
+        'workspaceFolderBasename': workspace ? workspace.name : '',
+        'file': doc.uri.fsPath,
+        'relativeFile': vscode.workspace.asRelativePath(doc.uri),
+        'fileDirname': path.dirname(doc.uri.fsPath),
+        'fileExtname': path.extname(doc.uri.fsPath),
+        'fileBasename': path.basename(doc.uri.fsPath),
+        'fileBasenameNoExtension': path.basename(doc.uri.fsPath, path.extname(doc.uri.fsPath)),
+        'pathSeparator': path.sep,
+        'cwd': workspace ? workspace.uri.fsPath : '', // Standard fallback
+        // non-canonical vscode variants:
+        'relativeFileDirname': relativeFileDirname === '.' ? '' : relativeFileDirname,
+    };
+
+    return vars;
 }

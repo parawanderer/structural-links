@@ -6,14 +6,19 @@ export interface LinkRule {
     linkPattern: {
         capture?: string;
         target: string;
-        transforms?: LinkRuleTransform[];
+        transforms?: (LinkRuleTransformRegex|LinkRuleTransformCommand)[];
         text?: string;
     };
 }
 
-export interface LinkRuleTransform {
+export interface LinkRuleTransformRegex {
     search: string;
     replace: string;
+    applyTo?: string;
+}
+
+export interface LinkRuleTransformCommand {
+    command: string;
     applyTo?: string;
 }
 

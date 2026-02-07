@@ -112,33 +112,59 @@
                                         "type": "array",
                                         "items": {
                                             "type": "object",
-                                            "required": ["search", "replace"],
-                                            "properties": {
-                                                "search": {
-                                                    "type": "string",
-                                                    "description": "Regex or string to find."
+                                            "oneOf": [
+                                                {
+                                                    "required": ["search", "replace"],
+                                                    "properties": {
+                                                        "search": {
+                                                            "type": "string",
+                                                            "description": "Regex or string to find."
+                                                        },
+                                                        "replace": {
+                                                            "type": "string",
+                                                            "description": "String to replace with."
+                                                        },
+                                                        "applyTo": {
+                                                            "type": "string",
+                                                            "markdownDescription": "Apply to a specific capture group (e.g., `$1` or `$name` if you used named groups `(?<name>...)`) or `all`.\n\nIf omitted, applies to the whole URL\n\nDefault is `all`.",
+                                                            "default": "all",
+                                                            "examples": [
+                                                                "$1",
+                                                                "$2",
+                                                                "$3"
+                                                            ],
+                                                            "pattern": "^(all)|(\\$[a-zA-Z0-9]+)$"
+                                                        }
+                                                    }
                                                 },
-                                                "replace": {
-                                                    "type": "string",
-                                                    "description": "String to replace with."
-                                                },
-                                                "applyTo": {
-                                                    "type": "string",
-                                                    "markdownDescription": "Apply to a specific capture group (e.g., `$1` or `$name` if you used named groups `(?<name>...)`) or `all`.\n\nIf omitted, applies to the whole URL\n\nDefault is `all`.",
-                                                    "default": "all",
-                                                    "examples": [
-                                                        "$1",
-                                                        "$2",
-                                                        "$3"
-                                                    ],
-                                                    "pattern": "^(all)|(\\$[a-zA-Z0-9]+)$"
+                                                {
+                                                    "required": ["command"],
+                                                    "properties": {
+                                                        "command": {
+                                                            "type": "string",
+                                                            "default": "urlEncode",
+                                                            "enum": ["urlEncode", "urlDecode", "toUpperCase", "toLowerCase", "trim"],
+                                                            "description": "Predefined transformations. `urlEncode` and `urlDecode` are especially useful for making sure captured values are safe to include in URLs."
+                                                        },
+                                                        "applyTo": {
+                                                            "type": "string",
+                                                            "markdownDescription": "Apply to a specific capture group (e.g., `$1` or `$name` if you used named groups `(?<name>...)`) or `all`.\n\nIf omitted, applies to the whole URL\n\nDefault is `all`.",
+                                                            "default": "all",
+                                                            "examples": [
+                                                                "$1",
+                                                                "$2",
+                                                                "$3"
+                                                            ],
+                                                            "pattern": "^(all)|(\\$[a-zA-Z0-9]+)$"
+                                                        }
+                                                    }
                                                 }
-                                            }
+                                            ]
                                         }
                                     },
                                     "target": {
                                         "type": "string",
-                                        "markdownDescription": "Target URL. Use `$1`... for groups.\n\ne.g.:\n\n- `https://example.com/$1`\n- `https://example.com/$name` (when using named groups like `(?<name>...)`)",
+                                        "markdownDescription": "Target URL. You can use `$1`... or `$name` for groups.\n\nYou can also use **some** [VSCode variables](https://code.visualstudio.com/docs/reference/variables-reference) like `${workspaceFolder}`. See the extension's [README](https://github.com/parawanderer/structural-links) for more. \n\ne.g.:\n\n- `https://example.com/$1`\n- `https://example.com/$name` (when using named groups like `(?<name>...)`)",
                                         "examples": [
                                             "https://example.com/$1"
                                         ]
