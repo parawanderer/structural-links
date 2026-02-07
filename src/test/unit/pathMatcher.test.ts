@@ -41,6 +41,43 @@ suite('Path Matcher Test Suite', () => {
         // Means: absolutely everything
         ['$..*', ['store', 'book'], true],
         ['$..*', ['a', 'b', 'c', 'd'], true],
+
+        // --- SPECIAL CHARACTERS & ENCODING STRESS TESTS ---
+
+        // 1. Spaces in Keys (The "Helm Chart Label" Special)
+        // Matches: my-app['kubernetes.io/created-by']
+        ['$.my-app["kubernetes.io/created-by"]', ['my-app', 'kubernetes.io/created-by'], true],
+        ['$.my-app["Key With Spaces"]', ['my-app', 'Key With Spaces'], true],
+
+        // 2. Unicode / International Characters
+        // "Hât" (French), "数据" (Chinese), "Данные" (Russian)
+        ['$.config["café"].price', ['config', 'café', 'price'], true],
+        ['$.users["José"].id', ['users', 'José', 'id'], true],
+        ['$.data["数据"].value', ['data', '数据', 'value'], true],
+        ['$..["Данные"]', ['system', 'core', 'Данные'], true], // Recursive + Cyrillic
+
+        // 3. The "Quote In A Quote" Nightmare
+        // Keys like: `item's_name` or `"quoted"_key`
+        // JSONPath: $['item\'s_name'] (escaped single quote)
+        ['$["item\'s_name"]', ["item's_name"], true],
+        ['$["key_with_\"quotes\"_inside"]', ['key_with_"quotes"_inside'], true],
+
+        // 4. Brackets inside keys (The "It looks like an array but isn't" trap)
+        // Key name is literally "user[0]" (not an array index)
+        ['$.group["user[0]"].name', ['group', 'user[0]', 'name'], true],
+        // Ensure it DOESN'T match the actual array index 0
+        ['$.group["user[0]"].name', ['group', 'user', '0', 'name'], false],
+
+        // 5. Special Regex Characters in Keys (The "Plus/Star" trap)
+        // Keys with +, ?, *, $ inside them (e.g., "C++", "Question?")
+        ['$.langs["C++"].version', ['langs', 'C++', 'version'], true],
+        ['$.questions["What?"].answer', ['questions', 'What?', 'answer'], true],
+
+        // 6. Deeply Nested Arrays with Wildcards
+        ['$.store.book[*].author[*]', ['store', 'book', '5', 'author', '1'], true],
+
+        // 7. Emojis (Because someone, somewhere, is using them as keys)
+        ['$.["🚀"].status', ['🚀', 'status'], true]
     ];
 
     testCases.forEach(([expression, path, expected]) => {
