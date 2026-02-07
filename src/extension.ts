@@ -103,13 +103,7 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
                                 regexCache.set(rule.jsonPath!, ruleRegex);
                             }
 
-                            if (ruleRegex.test(pathString)) {
-
-                                let targetContent: string = node.value as string;
-                                let range = new vscode.Range(
-                                    document.positionAt(node.range![0]),
-                                    document.positionAt(node.range![1])
-                                );
+                            if (ruleRegex.test(pathString) && typeof node.value === 'string') {
 
                                 if (rule.jsonPathValuePattern) {
                                     const valueRegex = new RegExp(rule.jsonPathValuePattern);
@@ -118,14 +112,13 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
                                     if (!match) {
                                         continue; // Skip this rule if value doesn't match
                                     }
-
-                                    targetContent = match[0]; // Use the matched portion of the value
-                                    range = new vscode.Range(
-                                        document.positionAt(node.range![0] + 1 + match.index),
-                                        document.positionAt(node.range![0] + 1 + match.index + match[0].length)
-                                    );
-
                                 }
+
+                                const targetContent: string = node.value as string;
+                                const range = new vscode.Range(
+                                    document.positionAt(node.range![0]),
+                                    document.positionAt(node.range![1])
+                                );
 
                                 createLink(targetContent, range, rule, document, links);
                             }
