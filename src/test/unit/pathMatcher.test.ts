@@ -7,6 +7,7 @@ suite('Path Matcher Test Suite', () => {
     const testCases: [string, string[], boolean][] = [
         // [jsonPath, currentPath, expectedResult]
         ['$.store.book', ['store', 'book'], true],
+        ['$.["store"].book', ['store', 'book'], true],
         ['$.store.book', ['store', 'magazine'], false],
         ['$..author', ['store', 'book', '0', 'author'], true],
         ['$..author', ['author'], true], // Matches root author
@@ -60,7 +61,12 @@ suite('Path Matcher Test Suite', () => {
         // Keys like: `item's_name` or `"quoted"_key`
         // JSONPath: $['item\'s_name'] (escaped single quote)
         ['$["item\'s_name"]', ["item's_name"], true],
-        ['$["key_with_\"quotes\"_inside"]', ['key_with_"quotes"_inside'], true],
+        ['$["key_with_\\"quotes\\"_inside"]', ['key_with_"quotes"_inside'], true],
+        ['$["key_with_\\"quotes\\"_inside"].bar', ['key_with_"quotes"_inside', 'bar'], true],
+        ['$["key_with_"quotes"_inside"]', ['key_with_"quotes"_inside'], false], // invalid escaping
+        ['$["key_with_"quotes"_inside"].bar', ['key_with_"quotes"_inside', 'bar'], false], // invalid escaping
+        ['$["key_with_\'quotes\'_inside"]', ['key_with_\'quotes\'_inside'], true],
+        ['$["key_with_\'quotes\'_inside"].bar', ['key_with_\'quotes\'_inside', 'bar'], true],
 
         // 4. Brackets inside keys (The "It looks like an array but isn't" trap)
         // Key name is literally "user[0]" (not an array index)
