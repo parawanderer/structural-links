@@ -50,7 +50,7 @@ export function deactivate() {
     }
 }
 
-// utils:
+// --- CORE LOGIC ---
 
 function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const config = vscode.workspace.getConfiguration('structuralLinks');
@@ -67,87 +67,93 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const text = document.getText();
     const links: vscode.DocumentLink[] = [];
 
+    // Build variables once per document
     const vars = buildSystemVariableMap(document);
 
     // --- STRATEGY A: STRUCTURAL (JSON/YAML) ---
-    // Only parse AST if we have at least one JSONPath rule
-    const jsonPathRules: LinkRule[] = activeRules.filter(r => !!r.jsonPath);
-    if (jsonPathRules.length > 0) {
-        try {
-            const yamlDoc = parseDocument(text);
+    // Only run AST parsing if the language is actually data.
+    if (['yaml', 'json', 'jsonc'].includes(document.languageId)) {
 
-            const visit = (node: any, currentPath: string[]) => {
-                if (!node) return;
+        // Only parse AST if we have at least one JSONPath rule
+        const jsonPathRules: LinkRule[] = activeRules.filter(r => !!r.jsonPath);
+        if (jsonPathRules.length > 0) {
+            try {
+                const yamlDoc = parseDocument(text);
 
-                if (isScalar(node)) {
-                    // SLOP FIX: Join with Null Byte to preserve dots in keys
-                    // path: ['.vars', 'foo'] -> "\x00.vars\x00foo"
-                    const pathString = '\x00' + currentPath.join('\x00');
+                const visit = (node: any, currentPath: string[]) => {
+                    if (!node) return;
 
-                    for (const rule of jsonPathRules) {
-                        try {
+                    if (isScalar(node)) {
+                        // SLOP FIX: Join with Null Byte to preserve dots in keys
+                        // path: ['.vars', 'foo'] -> "\x00.vars\x00foo"
+                        const pathString = '\x00' + currentPath.join('\x00');
 
-                            let ruleRegex = regexCache.get(rule.jsonPath!);
-                            if (!ruleRegex) {
-                                ruleRegex = jsonPathToRegex(rule.jsonPath!);
-                                regexCache.set(rule.jsonPath!, ruleRegex);
-                            }
+                        for (const rule of jsonPathRules) {
+                            try {
 
-                            if (ruleRegex.test(pathString) && typeof node.value === 'string') {
+                                let ruleRegex = regexCache.get(rule.jsonPath!);
+                                if (!ruleRegex) {
+                                    ruleRegex = jsonPathToRegex(rule.jsonPath!);
+                                    regexCache.set(rule.jsonPath!, ruleRegex);
+                                }
 
-                                if (rule.jsonPathValuePattern) {
-                                    const valueRegex = new RegExp(rule.jsonPathValuePattern);
-                                    const match = valueRegex.exec(String(node.value));
+                                if (ruleRegex.test(pathString) && typeof node.value === 'string') {
 
-                                    if (!match) {
-                                        continue; // Skip this rule if value doesn't match
+                                    if (rule.jsonPathValuePattern) {
+                                        const valueRegex = new RegExp(rule.jsonPathValuePattern);
+                                        const match = valueRegex.exec(String(node.value));
+
+                                        if (!match) {
+                                            continue; // Skip this rule if value doesn't match
+                                        }
+                                    }
+
+                                    const targetContent: string = node.value as string;
+                                    const range = new vscode.Range(
+                                        document.positionAt(node.range![0]),
+                                        document.positionAt(node.range![1])
+                                    );
+
+                                    const linkDetails: LinkDetails | null = createLink(targetContent, rule);
+                                    if (linkDetails){
+                                        const link = new vscode.DocumentLink(
+                                            range,
+                                            vscode.Uri.parse(injectSystemVariables(linkDetails.target, vars))
+                                    );
+                                        link.tooltip = linkDetails.tooltip;
+                                        links.push(link);
                                     }
                                 }
-
-                                const targetContent: string = node.value as string;
-                                const range = new vscode.Range(
-                                    document.positionAt(node.range![0]),
-                                    document.positionAt(node.range![1])
-                                );
-
-                                const linkDetails: LinkDetails | null = createLink(targetContent, rule);
-                                if (linkDetails){
-                                    const link = new vscode.DocumentLink(
-                                        range,
-                                        vscode.Uri.parse(injectSystemVariables(linkDetails.target, vars))
-                                );
-                                    link.tooltip = linkDetails.tooltip;
-                                    links.push(link);
-                                }
-                            }
-                        } catch (e) { /* ignore invalid regex */ }
+                            } catch (e) { /* ignore invalid regex */ }
+                        }
+                        return;
                     }
-                    return;
-                }
 
-                if (isMap(node)) {
-                    node.items.forEach((pair: any) => {
-                        const keyName = pair.key && isScalar(pair.key) ? String(pair.key.value) : '';
-                        // Don't skip empty keys, they are valid in YAML!
-                        visit(pair.value, [...currentPath, keyName]);
-                    });
-                }
+                    if (isMap(node)) {
+                        node.items.forEach((pair: any) => {
+                            const keyName = pair.key && isScalar(pair.key) ? String(pair.key.value) : '';
+                            // Don't skip empty keys, they are valid in YAML!
+                            visit(pair.value, [...currentPath, keyName]);
+                        });
+                    }
 
-                if (isSeq(node)) {
-                    node.items.forEach((item: any, index: number) => {
-                        visit(item, [...currentPath, String(index)]);
-                    });
-                }
-            };
+                    if (isSeq(node)) {
+                        node.items.forEach((item: any, index: number) => {
+                            visit(item, [...currentPath, String(index)]);
+                        });
+                    }
+                };
 
-            visit(yamlDoc.contents, []);
+                visit(yamlDoc.contents, []);
 
-        } catch (e) {
-            console.error("Parse error", e);
+            } catch (e) {
+                console.error("Parse error", e);
+            }
         }
     }
 
     // --- STRATEGY B: TEXT (REGEX ANYWHERE) ---
+    // Runs on ANY file type (Markdown, Python, C++, etc.)
     // Runs on the raw text, ignores structure. Good for comments/weird files.
     const textPatternRules: LinkRule[] = activeRules.filter(r => !!r.textPattern);
     textPatternRules.forEach(rule => {
@@ -186,6 +192,7 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     return links;
 }
 
+// --- VARS ---
 function buildSystemVariableMap(doc: vscode.TextDocument): Record<string, string> {
     const workspace = vscode.workspace.getWorkspaceFolder(doc.uri);
 
