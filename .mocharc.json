@@ -1,0 +1,6 @@
+{
+  "extension": ["ts"],
+  "spec": "src/test/unit/**/*.test.ts",
+  "require": "ts-node/register",
+  "ui": "tdd"
+}
