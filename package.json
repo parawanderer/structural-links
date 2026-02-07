@@ -1,26 +1,31 @@
 {
     "name": "structural-links",
     "displayName": "Structural Links",
-    "description": "Extend JSON Path documents and text files to show external links",
+    "description": "Create clickable links in YAML/JSON based on structure, and text files based on Regex.",
     "version": "0.0.1",
     "engines": {
-        "vscode": "^1.109.0"
+        "vscode": "^1.80.0"
     },
     "categories": [
+        "Programming Languages",
         "Other"
     ],
-    "activationEvents": [
-        "onLanguage:yaml",
-        "onLanguage:json"
+    "keywords": [
+        "yaml",
+        "json",
+        "link",
+        "regex",
+        "jsonpath"
     ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/parawanderer/structural-links"
+    },
     "main": "./dist/extension.js",
     "contributes": {
-        "commands": [
-            {
-                "command": "structural-links.helloWorld",
-                "title": "Hello World"
-            }
-        ],
         "configuration": {
             "title": "Structural Links",
             "properties": {
@@ -32,6 +37,7 @@
                         "additionalProperties": false,
                         "oneOf": [
                             {
+                                "title": "JSON/YAML Structure Rule",
                                 "required": [
                                     "jsonPath",
                                     "linkPattern"
@@ -43,6 +49,7 @@
                                 }
                             },
                             {
+                                "title": "Generic Text Rule",
                                 "required": [
                                     "textPattern",
                                     "linkPattern"
@@ -57,40 +64,23 @@
                         "properties": {
                             "filePattern": {
                                 "type": "string",
-                                "markdownDescription": "Glob pattern (e.g., `**/models/*.yaml`).",
-                                "default": "**/*",
-                                "examples": [
-                                    "**/*",
-                                    "**/filename.yaml",
-                                    "**/models/*.yaml"
-                                ]
+                                "markdownDescription": "Glob pattern (e.g., `**/models/*.yaml`). Default: `**/*`",
+                                "default": "**/*"
                             },
                             "jsonPath": {
                                 "type": "string",
-                                "markdownDescription": "JSONPath (e.g., `$.store.book[*].title` or `$['my-key']`).",
-                                "pattern": "^[\\w\\.\\*\\[\\]'\"\\-\\$\\s]+$",
-                                "examples": [
-                                    "$.store.book[*].title",
-                                    "$['my-key']",
-                                    "$..author"
-                                ]
+                                "markdownDescription": "JSONPath (e.g., `$.store.book[*].title`).",
+                                "pattern": "^[\\w\\.\\*\\[\\]'\"\\-\\$\\s]+$"
                             },
                             "jsonPathValuePattern": {
                                 "type": "string",
                                 "description": "Regex to match the value at the JSONPath. Only applies to jsonPath rules.",
-                                "format": "regex",
-                                "examples": [
-                                    "(.*)",
-                                    "prefix\\.(\\w+)"
-                                ]
+                                "format": "regex"
                             },
                             "textPattern": {
                                 "type": "string",
-                                "description": "Global Regex to find in the file (ignores JSON structure).",
-                                "format": "regex",
-                                "examples": [
-                                    "(.*)"
-                                ]
+                                "description": "Global Regex to find in the file (ignores structure).",
+                                "format": "regex"
                             },
                             "linkPattern": {
                                 "type": "object",
@@ -101,12 +91,9 @@
                                 "properties": {
                                     "capture": {
                                         "type": "string",
-                                        "markdownDescription": "Regex to extract values (`$1`, `$2`). \n\nYou may also use named groups: `(?<name>...)` and reference them as `$name`. \n\nIf omitted, the whole JSONPath match or text match is used. Default is the whole match.",
+                                        "markdownDescription": "Regex to extract values. Default: `^(.*)$`\n\nYou may also use named groups: `(?<name>...)` and reference them as `$name`. \n\nIf omitted, the whole JSONPath match or text match is used. Default is the whole match.",
                                         "default": "^(.*)$",
-                                        "format": "regex",
-                                        "examples": [
-                                            "^(.*)$"
-                                        ]
+                                        "format": "regex"
                                     },
                                     "transforms": {
                                         "type": "array",
@@ -144,7 +131,7 @@
                                                             "type": "string",
                                                             "default": "urlEncode",
                                                             "enum": ["urlEncode", "urlDecode", "toUpperCase", "toLowerCase", "trim"],
-                                                            "description": "Predefined transformations. `urlEncode` and `urlDecode` are especially useful for making sure captured values are safe to include in URLs."
+                                                            "description": "Transformation command. `urlEncode` and `urlDecode` are especially useful for making sure captured values are safe to include in URLs."
                                                         },
                                                         "applyTo": {
                                                             "type": "string",
