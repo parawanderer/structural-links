@@ -57,7 +57,7 @@
                         "properties": {
                             "filePattern": {
                                 "type": "string",
-                                "description": "Glob pattern (e.g., **/models/*.yaml).",
+                                "markdownDescription": "Glob pattern (e.g., `**/models/*.yaml`).",
                                 "default": "**/*",
                                 "examples": [
                                     "**/*",
@@ -67,7 +67,7 @@
                             },
                             "jsonPath": {
                                 "type": "string",
-                                "description": "JSONPath (e.g., $.store.book[*].title or $['my-key']).",
+                                "markdownDescription": "JSONPath (e.g., `$.store.book[*].title` or `$['my-key']`).",
                                 "pattern": "^[\\w\\.\\*\\[\\]'\"\\-\\$\\s]+$",
                                 "examples": [
                                     "$.store.book[*].title",
@@ -101,23 +101,51 @@
                                 "properties": {
                                     "capture": {
                                         "type": "string",
-                                        "description": "Regex to extract values ($1, $2).",
-                                        "default": "(.*)",
+                                        "markdownDescription": "Regex to extract values (`$1`, `$2`).",
+                                        "default": "^(.*)$",
                                         "format": "regex",
                                         "examples": [
-                                            "(.*)"
+                                            "^(.*)$"
                                         ]
+                                    },
+                                    "transforms": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["search", "replace"],
+                                            "properties": {
+                                                "search": {
+                                                    "type": "string",
+                                                    "description": "Regex or string to find."
+                                                },
+                                                "replace": {
+                                                    "type": "string",
+                                                    "description": "String to replace with."
+                                                },
+                                                "applyTo": {
+                                                    "type": "string",
+                                                    "markdownDescription": "Apply to a specific capture group (e.g., `$1`) or `all`. If omitted, applies to the whole URL. Default is `all`.",
+                                                    "default": "all",
+                                                    "examples": [
+                                                        "$1",
+                                                        "$2",
+                                                        "$3"
+                                                    ],
+                                                    "pattern": "^(all)|(\\$\\d+)$"
+                                                }
+                                            }
+                                        }
                                     },
                                     "target": {
                                         "type": "string",
-                                        "description": "Target URL. Use $1... for groups.",
+                                        "markdownDescription": "Target URL. Use `$1`... for groups. e.g., `https://example.com/$1`.",
                                         "examples": [
                                             "https://example.com/$1"
                                         ]
                                     },
                                     "text": {
                                         "type": "string",
-                                        "description": "Hover tooltip text.",
+                                        "markdownDescription": "Hover tooltip text. May use `$1`... for groups. Defaults to 'Open Link'.",
                                         "default": "Open Link",
                                         "examples": [
                                             "Open Link for '$1'"

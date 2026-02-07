@@ -3,23 +3,15 @@ import * as vscode from 'vscode';
 import { parseDocument, isMap, isSeq, isScalar, Document, Node } from 'yaml';
 import { minimatch } from 'minimatch';
 import { jsonPathToRegex } from './pathMatcher';
+import { LinkRule, LinkRuleTransform } from './types';
 
-interface LinkRule {
-    filePattern?: string;
-    jsonPath?: string;
-    jsonPathValuePattern?: string; // optional regex to match the value at the JSONPath
-    textPattern?: string;
-    linkPattern: {
-        capture?: string;
-        target: string;
-        text?: string;
-    };
-}
 
 const FILE_SELECTORS: vscode.DocumentSelector = [
     { language: 'yaml' },
     { language: 'json' }
 ];
+
+const DEFAULT_TOOLTIP = "Open Link";
 
 let currentProvider: vscode.Disposable | undefined;
 const regexCache = new Map<string, RegExp>();
@@ -182,35 +174,64 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
 
 function createLink(matchedValue: string, targetRange: vscode.Range, rule: LinkRule, doc: vscode.TextDocument, links: vscode.DocumentLink[]) {
     const value = String(matchedValue);
-    const pattern = rule.linkPattern; // Access the new nested object
+    const pattern = rule.linkPattern;
 
     try {
-        const regex = new RegExp(pattern.capture || '(.*)');
+        const regex = new RegExp(pattern.capture || '^(.*)$');
         const match = regex.exec(value);
 
         if (match) {
-            let target = pattern.target;
-            let tooltip = pattern.text || "Open Link"; // Default tooltip
+            // 1. Prepare transformed groups
+            // We create a copy of the match groups so we don't mutate the original regex result
+            let transformedGroups = [...match];
 
-            // Replace $1, $2, etc. in both Target and Tooltip
-            for (let i = 0; i < match.length; i++) {
-                const groupVal = match[i] || '';
+            if (pattern.transforms) {
+                for (const t of pattern.transforms) {
+                    const searchRegex = new RegExp(t.search, 'g');
+
+                    if (t.applyTo && t.applyTo !== 'all') {
+                        const groupIndex = parseInt(t.applyTo.replace('$', ''));
+                        if (!isNaN(groupIndex) && transformedGroups[groupIndex]) {
+                            transformedGroups[groupIndex] = transformedGroups[groupIndex].replace(searchRegex, t.replace);
+                        }
+                    } else {
+                        // If "all", we'll apply it to the final strings later
+                    }
+                }
+            }
+
+            let target = pattern.target;
+            let tooltip = pattern.text || DEFAULT_TOOLTIP;
+
+            // 2. Inject transformed groups into target and tooltip
+            for (let i = 0; i < transformedGroups.length; i++) {
+                const groupVal = transformedGroups[i] || '';
                 target = target.replace(new RegExp(`\\$${i}`, 'g'), groupVal);
                 tooltip = tooltip.replace(new RegExp(`\\$${i}`, 'g'), groupVal);
             }
 
-            // Workspace Folder expansion
+            // 3. Handle Workspace Folder
             if (target.includes('${workspaceFolder}')) {
                 const ws = vscode.workspace.getWorkspaceFolder(doc.uri);
-                const wsPath = ws ? ws.uri.toString() : '';
-                target = target.replace('${workspaceFolder}', wsPath);
+                target = target.replace('${workspaceFolder}', ws ? ws.uri.toString() : '');
+            }
+
+            // 4. Apply "all" transforms to the final finished strings
+            if (pattern.transforms) {
+                for (const t of pattern.transforms) {
+                    if (!t.applyTo || t.applyTo === 'all') {
+                        const searchRegex = new RegExp(t.search, 'g');
+                        target = target.replace(searchRegex, t.replace);
+                        tooltip = tooltip.replace(searchRegex, t.replace);
+                    }
+                }
             }
 
             const link = new vscode.DocumentLink(targetRange, vscode.Uri.parse(target));
-            link.tooltip = tooltip; // VS Code native tooltip (simple text)
+            link.tooltip = tooltip;
             links.push(link);
         }
     } catch (e) {
-        console.log(`Regex failed for rule ${rule.jsonPath}:`, e);
+        console.log(`Link creation failed:`, e);
     }
 }
