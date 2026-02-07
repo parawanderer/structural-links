@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 import { parseDocument, isMap, isSeq, isScalar, Document, Node } from 'yaml';
 import { minimatch } from 'minimatch';
 import { jsonPathToRegex } from './pathMatcher';
-import { LinkRule, LinkRuleTransform } from './types';
+import { LinkDetails, LinkRule, LinkRuleTransform } from './types';
+import { createLink } from './linkBuilder';
 
 
 const FILE_SELECTORS: vscode.DocumentSelector = [
@@ -112,7 +113,12 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
                                     document.positionAt(node.range![1])
                                 );
 
-                                createLink(targetContent, range, rule, document, links);
+                                const linkDetails: LinkDetails | null = createLink(targetContent, rule);
+                                if (linkDetails){
+                                    const link = new vscode.DocumentLink(range, vscode.Uri.parse(linkDetails.target));
+                                    link.tooltip = linkDetails.tooltip;
+                                    links.push(link);
+                                }
                             }
                         } catch (e) { /* ignore invalid regex */ }
                     }
@@ -162,7 +168,12 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
                     document.positionAt(endPos)
                 );
 
-                createLink(match[0], range, rule, document, links);
+                const linkDetails: LinkDetails | null = createLink(match[0], rule);
+                if (linkDetails){
+                    const link = new vscode.DocumentLink(range, vscode.Uri.parse(linkDetails.target));
+                    link.tooltip = linkDetails.tooltip;
+                    links.push(link);
+                }
             }
         } catch (e) {
             console.log("Text pattern error", e);
@@ -170,71 +181,4 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     });
 
     return links;
-}
-
-function createLink(matchedValue: string, targetRange: vscode.Range, rule: LinkRule, doc: vscode.TextDocument, links: vscode.DocumentLink[]) {
-    const value = String(matchedValue);
-    const pattern = rule.linkPattern;
-
-    try {
-        const regex = new RegExp(pattern.capture || '^(.*)$');
-        const match = regex.exec(value);
-
-        if (match) {
-            // 1. Setup local copies for transformation
-            let transformedGroups = [...match];
-            let transformedNamedGroups: { [key: string]: string } = { ...match.groups };
-
-            // 2. Apply Transforms to Groups
-            if (pattern.transforms) {
-                for (const t of pattern.transforms) {
-                    const searchRegex = new RegExp(t.search, 'g');
-                    const applyTo = t.applyTo || 'all';
-
-                    if (applyTo.startsWith('$')) {
-                        const key = applyTo.slice(1); // strip the $
-
-                        // Check if it's a named group
-                        if (transformedNamedGroups[key] !== undefined) {
-                            transformedNamedGroups[key] = transformedNamedGroups[key].replace(searchRegex, t.replace);
-                        }
-                        // Or a positional group
-                        else {
-                            const idx = parseInt(key);
-                            if (!isNaN(idx) && transformedGroups[idx]) {
-                                transformedGroups[idx] = transformedGroups[idx].replace(searchRegex, t.replace);
-                            }
-                        }
-                    }
-                }
-            }
-
-            let target = pattern.target;
-            let tooltip = pattern.text || "Open Link";
-
-            // 3. Inject Positional Groups ($1, $2...)
-            for (let i = 0; i < transformedGroups.length; i++) {
-                const val = transformedGroups[i] || '';
-                const re = new RegExp(`\\$${i}`, 'g');
-                target = target.replace(re, val);
-                tooltip = tooltip.replace(re, val);
-            }
-
-            // 4. Inject Named Groups ($name)
-            for (const [name, val] of Object.entries(transformedNamedGroups)) {
-                const re = new RegExp(`\\$${name}`, 'g');
-                target = target.replace(re, val);
-                tooltip = tooltip.replace(re, val);
-            }
-
-            // 5. Finalize (Workspace + "all" transforms)
-            // ... (rest of your existing workspace folder and "all" transform logic)
-
-            const link = new vscode.DocumentLink(targetRange, vscode.Uri.parse(target));
-            link.tooltip = tooltip;
-            links.push(link);
-        }
-    } catch (e) {
-        console.log(`Link creation failed:`, e);
-    }
 }

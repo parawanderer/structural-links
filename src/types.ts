@@ -16,3 +16,8 @@ export interface LinkRuleTransform {
     replace: string;
     applyTo?: string;
 }
+
+export interface LinkDetails {
+    target: string;
+    tooltip: string;
+}
