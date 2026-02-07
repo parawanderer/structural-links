@@ -32,12 +32,26 @@
                         "additionalProperties": false,
                         "oneOf": [
                             {
-                                "required": ["jsonPath", "linkPattern" ],
-                                "not": { "required": ["textPattern"] }
+                                "required": [
+                                    "jsonPath",
+                                    "linkPattern"
+                                ],
+                                "not": {
+                                    "required": [
+                                        "textPattern"
+                                    ]
+                                }
                             },
                             {
-                                "required": ["textPattern", "linkPattern" ],
-                                "not": { "required": ["jsonPath"] }
+                                "required": [
+                                    "textPattern",
+                                    "linkPattern"
+                                ],
+                                "not": {
+                                    "required": [
+                                        "jsonPath"
+                                    ]
+                                }
                             }
                         ],
                         "properties": {
@@ -45,19 +59,29 @@
                                 "type": "string",
                                 "description": "Glob pattern (e.g., **/models/*.yaml).",
                                 "default": "**/*",
-                                "examples": ["**/*", "**/filename.yaml", "**/models/*.yaml"]
+                                "examples": [
+                                    "**/*",
+                                    "**/filename.yaml",
+                                    "**/models/*.yaml"
+                                ]
                             },
                             "jsonPath": {
                                 "type": "string",
-                                "description": "Dot-notation path (e.g., spec.containers.*.image).",
-                                "pattern": "^[\\w.*[\\]]+$",
-                                "examples": ["spec.containers.*.image"]
+                                "description": "JSONPath (e.g., $.store.book[*].title or $['my-key']).",
+                                "pattern": "^[\\w\\.\\*\\[\\]'\"\\-\\$\\s]+$",
+                                "examples": [
+                                    "$.store.book[*].title",
+                                    "$['my-key']",
+                                    "$..author"
+                                ]
                             },
                             "textPattern": {
                                 "type": "string",
                                 "description": "Global Regex to find in the file (ignores JSON structure).",
                                 "format": "regex",
-                                "examples": ["(.*)"]
+                                "examples": [
+                                    "(.*)"
+                                ]
                             },
                             "linkPattern": {
                                 "type": "object",
@@ -71,18 +95,24 @@
                                         "description": "Regex to extract values ($1, $2).",
                                         "default": "(.*)",
                                         "format": "regex",
-                                        "examples": ["(.*)"]
+                                        "examples": [
+                                            "(.*)"
+                                        ]
                                     },
                                     "target": {
                                         "type": "string",
                                         "description": "Target URL. Use $1... for groups.",
-                                        "examples": ["https://example.com/$1"]
+                                        "examples": [
+                                            "https://example.com/$1"
+                                        ]
                                     },
                                     "text": {
                                         "type": "string",
                                         "description": "Hover tooltip text.",
                                         "default": "Open Link",
-                                        "examples": ["Open Link for '$1'"]
+                                        "examples": [
+                                            "Open Link for '$1'"
+                                        ]
                                     }
                                 }
                             }
@@ -104,7 +134,8 @@
         "pretest": "npm run compile-tests && npm run compile && npm run lint",
         "check-types": "tsc --noEmit",
         "lint": "eslint src",
-        "test": "vscode-test"
+        "test": "vscode-test",
+        "test:unit": "mocha"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.10",
@@ -114,7 +145,9 @@
         "@vscode/test-electron": "^2.5.2",
         "esbuild": "^0.27.2",
         "eslint": "^9.39.2",
+        "mocha": "^11.7.5",
         "npm-run-all": "^4.1.5",
+        "ts-node": "^10.9.2",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.54.0"
     },
