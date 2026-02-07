@@ -29,32 +29,60 @@
                     "description": "Rules for linking specific paths in YAML/JSON to URLs",
                     "items": {
                         "type": "object",
+                        "additionalProperties": false,
+                        "oneOf": [
+                            {
+                                "required": ["jsonPath", "linkPattern" ],
+                                "not": { "required": ["textPattern"] }
+                            },
+                            {
+                                "required": ["textPattern", "linkPattern" ],
+                                "not": { "required": ["jsonPath"] }
+                            }
+                        ],
                         "properties": {
                             "filePattern": {
                                 "type": "string",
-                                "description": "Glob pattern for files this rule applies to (e.g., **/models/*.yaml).",
-                                "default": "**/*"
+                                "description": "Glob pattern (e.g., **/models/*.yaml).",
+                                "default": "**/*",
+                                "examples": ["**/*", "**/filename.yaml", "**/models/*.yaml"]
                             },
                             "jsonPath": {
                                 "type": "string",
-                                "description": "Dot-notation path to the field (e.g., spec.containers.*.image)."
+                                "description": "Dot-notation path (e.g., spec.containers.*.image).",
+                                "pattern": "^[\\w.*[\\]]+$",
+                                "examples": ["spec.containers.*.image"]
+                            },
+                            "textPattern": {
+                                "type": "string",
+                                "description": "Global Regex to find in the file (ignores JSON structure).",
+                                "format": "regex",
+                                "examples": ["(.*)"]
                             },
                             "linkPattern": {
                                 "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                    "target"
+                                ],
                                 "properties": {
                                     "capture": {
                                         "type": "string",
-                                        "description": "Regex to match the value. Use groups ($1, $2) for replacement.",
-                                        "default": "(.*)"
+                                        "description": "Regex to extract values ($1, $2).",
+                                        "default": "(.*)",
+                                        "format": "regex",
+                                        "examples": ["(.*)"]
                                     },
                                     "target": {
                                         "type": "string",
-                                        "description": "Target URL. Use $1... for groups, ${workspaceFolder} for root."
+                                        "description": "Target URL. Use $1... for groups.",
+                                        "examples": ["https://example.com/$1"]
                                     },
                                     "text": {
                                         "type": "string",
-                                        "description": "The hover text (Tooltip). Supports $1... replacement.",
-                                        "default": "Open: $1"
+                                        "description": "Hover tooltip text.",
+                                        "default": "Open Link",
+                                        "examples": ["Open Link for '$1'"]
                                     }
                                 }
                             }

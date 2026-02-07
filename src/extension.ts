@@ -3,10 +3,11 @@ import { parseDocument, isMap, isSeq, isScalar, Document, Node } from 'yaml';
 import { minimatch } from 'minimatch';
 
 interface LinkRule {
-    filePattern: string;
-    jsonPath: string;
+    filePattern?: string;
+    jsonPath?: string;   // Optional now, because you might use textPattern instead
+    textPattern?: string; // New generic regex support
     linkPattern: {
-        capture: string;
+        capture?: string;
         target: string;
         text?: string;
     };
