@@ -1,9 +1,13 @@
 # Change Log
 
-All notable changes to the "structural-links" extension will be documented in this file.
+### 0.0.3
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+VSCode package cleanups + changelog cleanups.
 
-## [Unreleased]
+### 0.0.2
 
-- Initial release
+Added Extension Icon.
+
+### 0.0.1
+
+Initial release. Supports JSONPath, Regex patterns, and transformation pipelines.

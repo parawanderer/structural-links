@@ -26,6 +26,9 @@
         "type": "git",
         "url": "https://github.com/parawanderer/structural-links"
     },
+    "bugs": {
+        "url": "https://github.com/parawanderer/structural-links/issues"
+    },
     "main": "./dist/extension.js",
     "contributes": {
         "configuration": {
