@@ -90,40 +90,55 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
 
                         for (const rule of jsonPathRules) {
                             try {
+                                // multiple paths can be provided for one rule
+                                const paths: string[] = Array.isArray(rule.jsonPath!) ? rule.jsonPath! : [rule.jsonPath!];
+                                let found = false;
 
-                                let ruleRegex = regexCache.get(rule.jsonPath!);
-                                if (!ruleRegex) {
-                                    ruleRegex = jsonPathToRegex(rule.jsonPath!);
-                                    regexCache.set(rule.jsonPath!, ruleRegex);
-                                }
+                                for (const path of paths) {
 
-                                if (ruleRegex.test(pathString) && typeof node.value === 'string') {
+                                    let ruleRegex = regexCache.get(path);
+                                    if (!ruleRegex) {
+                                        ruleRegex = jsonPathToRegex(path);
+                                        regexCache.set(path, ruleRegex);
+                                    }
 
-                                    if (rule.jsonPathValuePattern) {
-                                        const valueRegex = new RegExp(rule.jsonPathValuePattern);
-                                        const match = valueRegex.exec(String(node.value));
+                                    if (ruleRegex.test(pathString) && typeof node.value === 'string') {
 
-                                        if (!match) {
-                                            continue; // Skip this rule if value doesn't match
+                                        if (rule.jsonPathValuePattern) {
+                                            const valueRegex = new RegExp(rule.jsonPathValuePattern);
+                                            const match = valueRegex.exec(String(node.value));
+                                            if (!match) {
+                                                continue; // Skip this rule if value doesn't match
+                                            }
+                                        }
+
+                                        const targetContent: string = node.value as string;
+                                        const range = new vscode.Range(
+                                            document.positionAt(node.range![0]),
+                                            document.positionAt(node.range![1])
+                                        );
+
+                                        const linkDetails: LinkDetails | null = createLink(targetContent, rule);
+                                        if (linkDetails){
+                                            const link = new vscode.DocumentLink(
+                                                range,
+                                                vscode.Uri.parse(injectSystemVariables(linkDetails.target, vars))
+                                            );
+
+                                            link.tooltip = linkDetails.tooltip;
+                                            links.push(link);
+
+                                            // allow the outer loop to terminate if we found a matching rule
+                                            found = true;
+                                            break;
                                         }
                                     }
 
-                                    const targetContent: string = node.value as string;
-                                    const range = new vscode.Range(
-                                        document.positionAt(node.range![0]),
-                                        document.positionAt(node.range![1])
-                                    );
-
-                                    const linkDetails: LinkDetails | null = createLink(targetContent, rule);
-                                    if (linkDetails){
-                                        const link = new vscode.DocumentLink(
-                                            range,
-                                            vscode.Uri.parse(injectSystemVariables(linkDetails.target, vars))
-                                    );
-                                        link.tooltip = linkDetails.tooltip;
-                                        links.push(link);
-                                    }
                                 }
+
+                                // terminate if we found a match.
+                                if (found) break;
+
                             } catch (e) { /* ignore invalid regex */ }
                         }
                         return;
@@ -158,30 +173,35 @@ function getLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const textPatternRules: LinkRule[] = activeRules.filter(r => !!r.textPattern);
     textPatternRules.forEach(rule => {
         try {
-            const globalRegex = new RegExp(rule.textPattern!, 'g'); // Ensure global flag
+            // multiple patterns can be linked to one rule.
+            const patterns: string[] = Array.isArray(rule.textPattern!) ? rule.textPattern! : [rule.textPattern!];
 
-            let match: RegExpExecArray | null;
-            while ((match = globalRegex.exec(text)) !== null) {
-                // Construct a fake "Node" object to reuse createLink
-                // match.index is the start, match[0].length is the length
-                const startPos = match.index;
-                const endPos = match.index + match[0].length;
+            for (const textPattern of patterns) {
 
-                // We create a fake node with a range property
-                // We need to map offset to line/col manually here since we don't have AST
-                const range = new vscode.Range(
-                    document.positionAt(startPos),
-                    document.positionAt(endPos)
-                );
+                const globalRegex = new RegExp(textPattern!, 'g'); // Ensure global flag
+                let match: RegExpExecArray | null;
+                while ((match = globalRegex.exec(text)) !== null) {
+                    // Construct a fake "Node" object to reuse createLink
+                    // match.index is the start, match[0].length is the length
+                    const startPos = match.index;
+                    const endPos = match.index + match[0].length;
 
-                const linkDetails: LinkDetails | null = createLink(match[0], rule);
-                if (linkDetails){
-                    const link = new vscode.DocumentLink(
-                        range,
-                        vscode.Uri.parse(injectSystemVariables(linkDetails.target, vars))
+                    // We create a fake node with a range property
+                    // We need to map offset to line/col manually here since we don't have AST
+                    const range = new vscode.Range(
+                        document.positionAt(startPos),
+                        document.positionAt(endPos)
                     );
-                    link.tooltip = linkDetails.tooltip;
-                    links.push(link);
+
+                    const linkDetails: LinkDetails | null = createLink(match[0], rule);
+                    if (linkDetails){
+                        const link = new vscode.DocumentLink(
+                            range,
+                            vscode.Uri.parse(injectSystemVariables(linkDetails.target, vars))
+                        );
+                        link.tooltip = linkDetails.tooltip;
+                        links.push(link);
+                    }
                 }
             }
         } catch (e) {

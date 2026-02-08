@@ -1,8 +1,8 @@
 export interface LinkRule {
     filePattern?: string;
-    jsonPath?: string;
+    jsonPath?: string | string[];
     jsonPathValuePattern?: string; // optional regex to match the value at the JSONPath
-    textPattern?: string;
+    textPattern?: string | string[];
     linkPattern: {
         capture?: string;
         target: string;

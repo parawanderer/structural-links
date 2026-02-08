@@ -1,5 +1,9 @@
 # Change Log
 
+### 0.0.4
+
+Support having **a list of JSONPaths** under `jsonPath` and **a list of regex expressions** under `textPattern` to support reusing rules without copypaste.
+
 ### 0.0.3
 
 VSCode package cleanups + changelog cleanups.

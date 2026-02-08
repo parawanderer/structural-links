@@ -111,7 +111,10 @@ Link to a file relative to the current document.
 
 ```json
 {
-  "jsonPath": "$.imports[*].path",
+  "jsonPath": [
+    "$.imports[*].path",
+    "$.exports[*].path"
+  ],
   "linkPattern": {
     "target": "file://${fileDirname}/$0",
     "text": "Open local file: $0"
@@ -139,14 +142,14 @@ It is an array of rule objects. Each rule can be a **Structure Rule** (using `js
 
 | Property | Description |
 | --- | --- |
-| `jsonPath` | The JSONPath query to locate nodes (e.g., `$.store.book[*]`). |
+| `jsonPath` | The JSONPath query (or queries) to locate nodes (e.g., `$.store.book[*]`). |
 | `jsonPathValuePattern` | Optional Regex to validate the value found at the path. |
 
 ### Text Rules (Any File)
 
 | Property | Description |
 | --- | --- |
-| `textPattern` | Global regex to find matches in the raw text. |
+| `textPattern` | Global regex (or regexes) to find matches in the raw text. |
 
 ### Link Pattern Definition
 
@@ -198,6 +201,9 @@ You can use these variables in your `target` string:
 
 ## Release Notes
 
+### 0.0.4
+
+Support having **a list of JSONPaths** under `jsonPath` and **a list of regex expressions** under `textPattern` to support reusing rules without copypaste.
 
 ### 0.0.3
 
