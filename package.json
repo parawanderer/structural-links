@@ -1,10 +1,12 @@
 {
     "name": "structural-links",
     "displayName": "Structural Links",
+    "publisher": "parawanderer",
     "description": "Create clickable links in YAML/JSON based on structure, and text files based on Regex.",
-    "version": "0.0.1",
+    "version": "0.0.2",
+    "icon": "assets/icon.png",
     "engines": {
-        "vscode": "^1.80.0"
+        "vscode": "^1.109.0"
     },
     "categories": [
         "Programming Languages",
